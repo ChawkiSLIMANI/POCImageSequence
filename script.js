@@ -48,7 +48,7 @@ function preload() {
 
 function drawLoading() {
     // Clear background
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = '#4a3c31';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw Text
@@ -76,7 +76,7 @@ function draw() {
     if (!isLoaded) return;
 
     // Background clear
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = '#4a3c31';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const img = images[currentIndex];
