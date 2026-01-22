@@ -6,6 +6,8 @@ const images = [];
 let loadedFrames = 0;
 let currentIndex = 0;
 let isLoaded = false;
+let isPlaying = false;
+let animationId = null;
 
 // Initialize
 function init() {
@@ -33,8 +35,6 @@ function preload() {
 
         img.onerror = () => {
             console.error(`Failed to load image: assets/frame_${frameNum}.jpg`);
-            // Still count it to avoid hanging, or handle error? 
-            // Ideally we'd validata assets, but for now let's just count it so we don't get stuck at 99%
             loadedFrames++;
             if (loadedFrames === totalFrames) {
                 isLoaded = true;
@@ -97,14 +97,23 @@ function drawImageCover(ctx, img) {
     const canvasRatio = canvasWidth / canvasHeight;
     const imgRatio = imgWidth / imgHeight;
 
-    // Determine scale to cover
+    // Determine scale
     let scale;
-    if (canvasRatio > imgRatio) {
-        // Canvas is wider than image (relative to height) -> fit width
-        scale = canvasWidth / imgWidth;
-    } else {
-        // Canvas is taller than image (relative to width) -> fit height
+
+    // Desktop Layout Check: 
+    // If canvas is wider than it is tall (Landscape/Desktop)
+    // AND Image is taller than it is wide (Portrait Asset)
+    // FORCE "Fit Height" (contain vertical)
+    if (canvasWidth > canvasHeight && imgHeight > imgWidth) {
         scale = canvasHeight / imgHeight;
+    }
+    // Otherwise use standard COVER logic (Mobile or unexpected landscape images)
+    else {
+        if (canvasRatio > imgRatio) {
+            scale = canvasWidth / imgWidth;
+        } else {
+            scale = canvasHeight / imgHeight;
+        }
     }
 
     // Calculate new dimensions
@@ -119,34 +128,53 @@ function drawImageCover(ctx, img) {
     ctx.drawImage(img, x, y, drawWidth, drawHeight);
 }
 
-function nextFrame(e) {
-    // Optional: prevent default if it's a touch event to specific behaviors
-    // e.preventDefault(); 
-
+function nextFrame() {
     if (!isLoaded) return;
 
     currentIndex++;
     if (currentIndex >= totalFrames) {
         currentIndex = 0;
     }
-
-    requestAnimationFrame(draw);
+    draw();
 }
 
-// Interaction
-window.addEventListener('click', nextFrame);
-window.addEventListener('touchstart', (e) => {
-    // Prevent firing click event after touchstart on some devices to avoid double skip
-    // But be careful not to block scroll if we needed it (overflow hidden though)
-    // For this simple tap interaction, it's safer to just listen to one or dedup.
-    // However, user ASKED for both. Let's debounce or checking timestamps if needed?
-    // Actually, usually 'click' fires after 'touchstart' sequence.
-    // Ideally we use pointer events, but user asked for click/touchstart.
-    // Let's use preventDefault on touchstart to stop mouse emulation (click)
-    e.preventDefault();
-    nextFrame();
-}, { passive: false });
+function startPlaying(e) {
+    if (e.type === 'touchstart') e.preventDefault();
+    if (!isLoaded || isPlaying) return;
 
+    isPlaying = true;
+    playLoop();
+}
+
+function stopPlaying(e) {
+    // if (e.type === 'touchend') e.preventDefault(); // Don't block default here usually
+    isPlaying = false;
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+}
+
+function playLoop() {
+    if (!isPlaying) return;
+
+    nextFrame(); // Advance one frame
+    animationId = requestAnimationFrame(playLoop);
+}
+
+// Interaction - Hold to Play
+window.addEventListener('mousedown', startPlaying);
+window.addEventListener('touchstart', startPlaying, { passive: false });
+
+window.addEventListener('mouseup', stopPlaying);
+window.addEventListener('mouseleave', stopPlaying);
+window.addEventListener('touchend', stopPlaying);
+
+// Keep click for single step? User asked for hold. 
+// Usually click handles short start/stop. 
+// With mousedown starting it, a short click is just a short play.
+// So we don't need a separate 'click' listener unless we want distinct behavior.
+// Current logic: mousedown starts loop, mouseup stops it. A fast click advances a few frames.
 
 // Start
 init();
