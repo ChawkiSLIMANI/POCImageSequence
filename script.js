@@ -1,7 +1,7 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-const totalFrames = 98;
+const totalFrames = 192;
 const images = [];
 let loadedFrames = 0;
 let currentIndex = 0;
